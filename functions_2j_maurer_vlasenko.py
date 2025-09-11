@@ -238,3 +238,126 @@ def cross_validate_svm(X, y_true, kernel_name, param_grid, k=5, seed=SEED):
         if mean_acc>best_mean:
             best_mean, best_params = mean_acc, kernel_pars.copy()
     return best_params, best_mean, history
+
+
+
+# this implements a working-set method that picks the Most Violating Pair (MVP)
+# and solves the 2-variable subproblem analytically each iteration
+
+def mvp_train(K: np.ndarray, y: np.ndarray, C: float, tol: float=1e-3, max_iter: int=200000):
+    """
+    Function that minimizes the dual objective function g(a)= 1/2 * a^T Q a - 1^T*a with Q=(y y^T) @ K
+    subject to 0<=a_i<=C and y^T a=0 using q=2 MVP updates
+    Inputs:
+        K: kernel matrix
+        y: labels
+        C: regularization parameter
+        tol: stopping tolerance
+        max_iter: maximum number of iterations
+    Outputs:
+        alphas: solution vector, stats dict with iterations, final dual obj (and the KKT gap)
+    """
+    n=y.shape[0]  # number of training points
+    a = np.zeros(n) # start at 0 (feasible because y^T a=0)
+    # a holds the dual variables, box-constrained in [0,C]
+
+    # Initial gradient of g(a)= Q a - 1, at a=0 this is -1
+    g = -np.ones(n)
+
+    # start at g(0)=0, accumulate exact per-step changes
+    # Keep the current value of g(a) (a=0 and g(0)=0), it will then get updated in the loop
+    primal_obj_g=0.0  # we store the minimized objective value g(a), not the dual
+
+    # Helper functions to build the index sets used by MVP
+    def I_up(a, y):
+        # KKT says if y_i==+1 then a_i<C can move up, if y_i==-1 then a_i>0 can move up
+        return ((y==1)&(a<C)) | ((y==-1)&(a>0)) # boolean mask for "can increase" wrt projected step
+    def I_low(a, y):
+        # and the complementary set that can move down (in projected sense)
+        return ((y==1)&(a>0)) | ((y==-1)&(a<C)) # boolean mask for "can decrease" wrt projected step
+
+    it=0  # iteration counter
+    while it<max_iter:
+        yg=y*g  # elementwise y_i*g_i to compute MVP scores fast
+
+        mask_up = I_up(a, y) # indices eligible to go up
+        mask_low = I_low(a, y) # indices eligible to go down
+
+        if not np.any(mask_up) or not np.any(mask_low):
+            # can't move up or down, break
+            break
+
+        # MVP: pick i with smallest y_i*g_i (most negative), and j with largest y_j*g_j
+        i = np.argmin(np.where(mask_up, yg, np.inf)) # choose i in R maximizing -g_i/y_i
+        j = np.argmax(np.where(mask_low, yg, -np.inf)) # choose j in S maximizing y_j*g_j
+
+        b_up=yg[i] # current best "up" score
+        b_low=yg[j] # current best "down" score
+        # stopping rule: gap<=tol means approximate KKT satisfied
+        gap=b_low-b_up # m(a)-M(a) with this coding
+        if gap<=tol:
+            break  # small gap -> good enough, break
+
+        # Analytic 2-variable step:
+        s=y[i]*y[j]  # s in {+1,-1}
+        d_i = 1.0 # direction coefficient for i (for clarity)
+        d_j = -s # direction coefficient for j (keeps y^T a invariant)
+
+        # directional derivative and curvature along feasible line
+        dTg = g[i]-s*g[j]  # equals derivative of g along direction
+        den = K[i,i]+K[j,j]-2.0*K[i,j]  # curvature: d^T*Q*d
+        # den>0 -> convex along this line, den<=0 -> flat/concave along this line
+
+        # Feasible box bounds for delta depending on s
+        if s==1:
+            L = max(-a[i], a[j]-C) # lower bound for delta
+            U = min(C-a[i], a[j]) # upper bound for delta
+        else:  # s==-1
+            L = max(-a[i], -a[j]) # lower bound for delta
+            U = min(C-a[i], C-a[j]) # upper bound for delta
+        # clipping to [L,U] keeps both updated coords inside [0,C]
+
+        # proposed unconstrained step then clipped to [L,U]; if den<=0, pick bound for descent
+        if den>1e-12:
+            delta = -dTg/den  # unconstrained minimizer along the line
+            # Clip to the feasible interval
+            if delta<U:
+                delta = delta # ok, still inside
+            else:
+                delta = U # too big, go to upper bound
+            if delta>L:
+                delta = delta # ok, still inside
+            else:
+                delta = L # too small, go to lower bound
+        else:
+            # non-positive curvature: step to the bound that most decreases g
+            delta = L if dTg>0 else U  # go where the 1st-order decrease is better
+
+        if abs(delta)<=1e-20:
+            # No meaningful progress, break
+            break
+
+        # Update alphas (feasible move preserves y^T a=0 by construction)
+        a_i_old, a_j_old = a[i], a[j]  # keep old values just in case you want diagnostics
+        a[i] = a[i]+delta  # move i forward by delta
+        a[j] = a[j]-s*delta  # move j in the coupled direction
+
+        # Gradient update: g <- g + Q[:,i]*delta_i + Q[:,j]*delta_j
+        # Q[:,i] = y*y[i]*K[:,i], delta_j=-s*delta
+        g = g+(y*y[i])*K[:, i]*delta+(y*y[j])*K[:, j]*(-s*delta)
+
+        # Exact objective change using quadratic model at old g
+        # primal_obj_g = dTg*delta + 0.5*den*delta^2
+        primal_obj_g = primal_obj_g+dTg*delta+0.5*den*(delta**2)
+        # we track g(a), the dual objective is f(a)=-g(a)
+
+        it+=1 # increase iterations
+
+    # store statistics
+    stats = {
+        'iterations': it,
+        'kkt_gap': float(max(0.0, gap)) if 'gap' in locals() else float('nan'),
+        'primal_obj_g': float(primal_obj_g), # minimized objective value g(a)
+        'dual_obj': float(-primal_obj_g) # dual objective f(a)=-g(a)
+    }
+    return a, stats
