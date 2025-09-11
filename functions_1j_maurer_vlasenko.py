@@ -374,7 +374,7 @@ def gradient_function(params, X, y, layer_sizes, activation_fun, activation_deri
 
 # Function that performs the training on the neural network
 def train_network(X, y, layer_sizes, activation='tanh', lambda_reg=0.01,
-                 method='L-BFGS-B', maxiter=1000):
+                 method='L-BFGS-B', maxiter=1000, seed=42):
     """
     Train a neural network using scipy.optimize
     Inputs:
@@ -388,6 +388,10 @@ def train_network(X, y, layer_sizes, activation='tanh', lambda_reg=0.01,
     Outputs:
         tuple: (weights, biases, optimization_result, initial_loss, final_loss)
     """
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+
     print(f"Training network with architecture: {layer_sizes}")
     print(f"Activation: {activation}, Lambda: {lambda_reg}")
 
