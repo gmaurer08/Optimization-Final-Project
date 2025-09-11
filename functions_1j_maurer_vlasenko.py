@@ -1,12 +1,16 @@
 
 import numpy as np
 import pandas as pd
+import random
 from scipy.optimize import minimize
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import warnings
 warnings.filterwarnings('ignore')
+
+random.seed(42)
+np.random.seed(42)
 
 # Activation Functions
 
