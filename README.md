@@ -6,6 +6,34 @@ This repository contains the final project for the Optimization Methods for Data
 - Géraldine Valérie Maurer, maurer.1996887@studenti.uniroma1.it
 - Viktoriia Vlasenko, vlasenko.2088928@studenti.uniroma1.it
 
+## Repository structure
+```project-root/
+Main
+|
+├── Part 1
+│   ├── functions_1j_maurer_vlasenko.py          # MLP Python functions
+│   └── run_1i_maurer_vlasenko.ipynb             # MLP regression from scratch Notebook
+|
+├── Part 2
+│   ├── functions_2j_maurer_vlasenko.py          # SVM Python functions
+│   └── run_2i_maurer_vlasenko.ipynb             # SVM dual optimization (CVXOPT) Notebook
+|
+├── Plots                                        # Plots for the first part
+│   ├── plot1.png                                # Optimization Progress (initial vs. final loss)
+│   ├── plot2.png                                # MSE and MAPE during Train and Test
+│   ├── plot3.png                                # Validation Loss vs. Regularization Strength
+│   └── plot4.png                                # Training vs. Validation Loss during Hyperparameter search
+│
+├── AGE_PREDICTION.csv                           # Age Regression Dataset
+├── GENDER_CLASSIFICATION.csv                    # Gender Classification Dataset
+│
+├── Maurer_Vlasenko.pdf                          # Project Report
+│
+├── LICENSE                                      # MIT license
+│
+└── README.md                                    # README file
+```
+
 ## Dataset
 The dataset used in this project is the [UTKFace dataset](https://www.kaggle.com/datasets/jangedoo/utkface-new). The over 20'000 pictures in the dataset were previously used to train a ResNet, and their features were extracted by the convolutional backbone to serve as input vectors to the models built in the project. Images of individuals with underrepresented ages in the dataset were removed to ensure a more balanced distribution. The project is split into two parts, each with its own pre-processed dataset.
 - **Part 1 - Regression**: [AGE REGRESSION.csv](https://github.com/gmaurer08/Optimization-Final-Project/blob/main/AGE_PREDICTION.csv)
