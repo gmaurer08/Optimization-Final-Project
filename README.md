@@ -30,3 +30,7 @@ For the **MLP regression**, validation MAPEs clustered around 23–24%, with the
 For the **SVM classifier**, the optimal hyperparameters were $C=1$, $\gamma=0.1$, with a 92.3% train accuracy and 90.0% test accuracy and balanced class performance (F1≈0.90). The MVP solver matched the performance of the CVXOPT baseline while being more computationally efficient (0.35s vs. 1.6s), confirming both correctness and scalability. Confusion matrices revealed symmetric errors, indicating well-calibrated margins and no bias toward either class.
 
 <img width="1234" height="205" alt="image" src="https://github.com/user-attachments/assets/68da8dcd-d4c8-46c9-94c5-ae8d42260a9f" />
+
+## Conclusions
+
+Building both models from scratch provided a deep understanding of optimization and regularization dynamics in supervised learning. The MLP experiment showed how moderate network depth and mid-range L2 penalties lead to a positive trade-off between bias and variance. The SVM study confirmed that RBF kernels with properly tuned parameters achieve strong, generalizable performance. Implementing both the dual QP and MVP solvers highlighted the practical balance between exact optimization and computational efficiency. Overall, the project delivered interpretable, reproducible, and well-generalized models for both regression and classification tasks.
